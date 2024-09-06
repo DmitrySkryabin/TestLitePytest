@@ -1,20 +1,38 @@
 import pytest 
 import inspect
+import json
 from lite import TestLiteTestReports as TRs
 from lite import TestLiteTestReport as TR
-from lite import STATUS, TestLite_id, get_step_number_with_error
+from lite import STATUS, TestLite_id, get_step_number_with_error, TestReportJSONEncoder, TestLiteFinalReport
+
+
+# def pytest_configure_node(node):
+#     print('START---------------pytest_configure_node-------------------------')
+#     print(node.__dict__)
+#     print('END---------------pytest_configure_node-------------------------')
+
+def pytest_xdist_node_collection_finished(node, ids):
+    print('START---------------pytest_xdist_node_collection_finished-------------------------')
+    print(node.__dict__)
+    print('-----------------------------------------------------------------------------------')
+    print('END---------------pytest_xdist_node_collection_finished-------------------------')
+
 
 def pytest_configure(config):
+    print('START++++++++++++++++++++++++++++++PYTEST CONFIGURE++++++++++++++++++++++++++++++++START')
     TRs()
+    print('END++++++++++++++++++++++++++++++++PYTEST CONFIGURE++++++++++++++++++++++++++++++++++END')
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: pytest.Parser):
     parser.addoption('--runtest_show', action="store", default='True')
+    parser.addoption('--save_json', action='store', default=None)
 
 
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
+    print('>>>pytest_runtest_makereportpytest_runtest_makereportpytest_runtest_makereportpytest_runtest_makereportpytest_runtest_makereport<<<<')
     outcome = yield
     report:pytest.TestReport = outcome.get_result()
 
@@ -67,6 +85,16 @@ def pytest_runtest_makereport(item, call):
         test_report.add_standart_data(report)
         # TRs.save_test_report(test_report)
     
+    print('TESTREPORTTESTREPORTTESTREPORTTESTREPORTTESTREPORTTESTREPORTTESTREPORTTESTREPORT\n')
+    print(test_report)
+    with open(f'test_reports/{test_report.nodeid.split(":")[-1]}___{report.when}.json', 'w') as file:
+        file.write(TestLiteFinalReport.get_serialize_finall_report())
+    from logger import Logger
+    log = Logger(__name__).get_logger()
+    log.info('-------------------------------------------------------------------------------')
+    log.info(call.__dict__)
+    log.info('-------------------------------------------------------------------------------')
+    print('TESTREPORTTESTREPORTTESTREPORTTESTREPORTTESTREPORTTESTREPORTTESTREPORTTESTREPORT\n')
     TRs.save_test_report(test_report)
         
 
@@ -148,12 +176,22 @@ def pytest_runtest_makereport(item, call):
             print('>=========================TEARDOWN=============================<')
         
         print('<--------------------------pytest_runtest_makereport------------------------------->\n\n')
+
+    print('<<<<pytest_runtest_makereportpytest_runtest_makereportpytest_runtest_makereportpytest_runtest_makereportpytest_runtest_makereport>>>>')
         
 
 
-def pytest_sessionfinish(session, exitstatus):
+def pytest_sessionfinish(session: pytest.Session, exitstatus):
     print('||||||||||||||||||||||||||||||||||||||||||SESSIONFINISH||||||||||||||||||||||||||||||||||||||||||||||')
-    for test_report in TRs.TestReports:
-        print(TRs.TestReports[test_report])
-        print('---------------------------------------')
+    # for test_report in TRs.TestReports:
+    #     print('---------------------------------------')
+    #     print(TRs.TestReports[test_report])
+    #     print('----------------encoded_data---------------------')
+    #     print(TestReportJSONEncoder().encode(TRs.TestReports[test_report]))
+    #     print('---------------------------------------')
+    json_report = TestLiteFinalReport.get_serialize_finall_report()
+    print(json_report)
+    if session.config.getoption('--save_json') is not None:
+        with open(f'{session.config.getoption("--save_json")}', 'w') as file:
+            file.write(json_report)
     print('||||||||||||||||||||||||||||||||||||||||||SESSIONFINISH||||||||||||||||||||||||||||||||||||||||||||||')
