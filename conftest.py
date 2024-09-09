@@ -11,11 +11,11 @@ from lite import STATUS, TestLite_id, get_step_number_with_error, TestReportJSON
 #     print(node.__dict__)
 #     print('END---------------pytest_configure_node-------------------------')
 
-def pytest_xdist_node_collection_finished(node, ids):
-    print('START---------------pytest_xdist_node_collection_finished-------------------------')
-    print(node.__dict__)
-    print('-----------------------------------------------------------------------------------')
-    print('END---------------pytest_xdist_node_collection_finished-------------------------')
+# def pytest_xdist_node_collection_finished(node, ids):
+#     print('START---------------pytest_xdist_node_collection_finished-------------------------')
+#     print(node.__dict__)
+#     print('-----------------------------------------------------------------------------------')
+#     print('END---------------pytest_xdist_node_collection_finished-------------------------')
 
 
 def pytest_configure(config):
@@ -96,6 +96,9 @@ def pytest_runtest_makereport(item, call):
     log.info('-------------------------------------------------------------------------------')
     print('TESTREPORTTESTREPORTTESTREPORTTESTREPORTTESTREPORTTESTREPORTTESTREPORTTESTREPORT\n')
     TRs.save_test_report(test_report)
+    # TRs.save_current_queue(TRs.counter)
+    # TRs.counter = TRs.counter + 1
+
         
 
     
@@ -189,8 +192,9 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus):
     #     print('----------------encoded_data---------------------')
     #     print(TestReportJSONEncoder().encode(TRs.TestReports[test_report]))
     #     print('---------------------------------------')
+    # print(TestLiteFinalReport.get_finall_report())
     json_report = TestLiteFinalReport.get_serialize_finall_report()
-    print(json_report)
+    # print(json_report)
     if session.config.getoption('--save_json') is not None:
         with open(f'{session.config.getoption("--save_json")}', 'w') as file:
             file.write(json_report)

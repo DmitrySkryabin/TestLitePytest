@@ -89,8 +89,9 @@ class TestLiteTestReports:
     __metaclass__ = TestLiteTestReportsMetaClass
 
     # TestReports:list[TestLiteTestReport] = []
-    TestReports:dict[str, TestLiteTestReport] = {}
-    queue = queue.Queue()
+    # TestReports:dict[str, TestLiteTestReport] = {}
+    TestReportsQueue = queue.Queue()
+    counter = 1
 
     def __init__(self):
         print('TestLiteTestReports INISIALIZING!!!!!!!!!!!!!!')
@@ -111,22 +112,56 @@ class TestLiteTestReports:
 
     @classmethod    
     def get_test_report(cls, nodeid: str):
-        test_report = cls.TestReports.get(nodeid)
-        if test_report is None:
-            return TestLiteTestReport(nodeid)
-        return test_report
+        print('>START>>GETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORT<<START<')
+        notincluded_elements = []
+        return_test_report = None
+        while not cls.TestReportsQueue.empty():
+            test_report: TestLiteTestReport = cls.TestReportsQueue.get()
+            if test_report.nodeid == nodeid:
+                return_test_report = test_report
+                break
+            else:
+                notincluded_elements.append(test_report)
+
+        if return_test_report is  None:
+            return_test_report = TestLiteTestReport(nodeid)
+        
+        for element in notincluded_elements:
+            cls.TestReportsQueue.put(element)
+        print('>END>>GETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORT<<END<')
+        return return_test_report
     
     @classmethod
     def save_test_report(cls, TestReport: TestLiteTestReport):
-        data = []
-        # while TestReport != cls.queue.get():
-        #     TestReport
-        while cls.queue.empty():
-            data.append(cls.queue.get())
-        print(f'DATA: {data}')
-        cls.TestReports.update({
-            TestReport.nodeid: TestReport
-        })
+        print('>START>>SAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORT<<START<')
+        notincluded_elements = []
+        while not cls.TestReportsQueue.empty():
+            test_report: TestLiteTestReport = cls.TestReportsQueue.get()
+            if test_report.nodeid == TestReport.nodeid:
+                break
+            else:
+                notincluded_elements.append(test_report)
+                
+        for element in notincluded_elements:
+            cls.TestReportsQueue.put(element)
+        cls.TestReportsQueue.put(TestReport)
+        print('>END>>SAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORT<<END<')
+
+    
+    @classmethod
+    def save_current_queue(cls, id):
+        print('>START>>SAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUE<<START<')
+        with open(f'testreport_queue/{id}.txt', 'w') as file:
+            current_queue = []
+            while not cls.TestReportsQueue.empty():
+                test_report = cls.TestReportsQueue.get()
+                print(test_report)
+                current_queue.append(test_report)
+            for elem in current_queue:
+                cls.TestReportsQueue.put(elem)
+            file.write(str(current_queue))
+        print('<END<<SAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUE>>END>')
+                
         
 
 
@@ -148,7 +183,12 @@ class TestLiteFinalReport:
 
     @classmethod
     def get_finall_report(cls):
-        return [TestLiteTestReports.TestReports[item] for item in TestLiteTestReports.TestReports]
+        test_reports = []
+        while not TestLiteTestReports.TestReportsQueue.empty():
+            test_reports.append(TestLiteTestReports.TestReportsQueue.get())
+        for item in test_reports:
+            TestLiteTestReports.TestReportsQueue.put(item)
+        return test_reports
 
     @classmethod
     def get_serialize_finall_report(cls):

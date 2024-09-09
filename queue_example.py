@@ -16,10 +16,15 @@ def save_element(elem):
 
 
 def get_element(elem):
-    while elem != queue_list.get():
-        pass
-    else:
-        print(queue_list.get())
+    other_elem = []
+    while not queue_list.empty():
+        queue_element = queue_list.get()
+        if elem == queue_element:
+            for element in other_elem:
+                queue_list.put(element)
+            return queue_element
+        else:
+            other_elem.append(queue_element)
 
 
 test_report_1 = TestReport(name='test_1', description=None, datetime=datetime.datetime(2024, 9, 6))
@@ -33,5 +38,19 @@ test_reports = [test_report_1, test_report_2, test_report_3, test_report_4]
 for item in test_reports:
     save_element(item)
 
+print('------------------INITIAL PRINT---------------------------')
+while not queue_list.empty():
+    print(queue_list.get())
+print('------------------INITIAL PRINT---------------------------')
 
-get_element(test_report_2)
+print('------------------CONTROL PRINT---------------------------')
+for report in test_reports:
+    queue_list.put(report)
+print('------------------CONTROL PRINT---------------------------')
+
+
+print(get_element(test_report_2))
+print('------------------AFTER PRINT---------------------------')
+while not queue_list.empty():
+    print(queue_list.get())
+print('------------------AFTER PRINT---------------------------')
