@@ -3,7 +3,22 @@ import datetime
 import json
 import dataclasses
 import queue
+import random
+import pickle
+import os
+import shutil
+import threading
 from enum import Enum
+from logger import Logger
+
+log = Logger(__name__).get_logger()
+
+
+class CONFIG:
+    REPORTSDIRNAME = 'TestLiteReports'
+    DELETEREPORTSDIR = True
+    REPORTSSAVETYPE = 'TXT'
+
 
 
 def id(TestLite_id):
@@ -86,82 +101,40 @@ class TestLiteTestReportsMetaClass(type):
  
 
 class TestLiteTestReports:
+    # Ебани сюда пикл и проверь, а потом еще добавь хуету чтобы вконце все потоки соединили свою хуету в одну хуету
     __metaclass__ = TestLiteTestReportsMetaClass
 
     # TestReports:list[TestLiteTestReport] = []
-    # TestReports:dict[str, TestLiteTestReport] = {}
+    TestReports:dict[str, TestLiteTestReport] = {}
+    save_pickle_file = 'TestLiteTemp'
     TestReportsQueue = queue.Queue()
     counter = 1
+    thread_list = []
+
+    @property
+    def thr_context(self) -> dict[str, TestLiteTestReport]|dict[None]:
+        if self._thr == threading.current_thread():
+            return self.TestReports
+        else:
+            return {}
 
     def __init__(self):
-        print('TestLiteTestReports INISIALIZING!!!!!!!!!!!!!!')
+        self._thr = threading.current_thread()
+        log.info(f'_thr: {self._thr}')
         
-
-    # @classmethod    
-    # def get_test_report(cls, nodeid: str):
-    #     test_report = cls.TestReports.get(nodeid)
-    #     if test_report is None:
-    #         return TestLiteTestReport(nodeid)
-    #     return test_report
-    
-    # @classmethod
-    # def save_test_report(cls, TestReport: TestLiteTestReport):
-    #     cls.TestReports.update({
-    #         TestReport.nodeid: TestReport
-    #     })
 
     @classmethod    
     def get_test_report(cls, nodeid: str):
-        print('>START>>GETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORT<<START<')
-        notincluded_elements = []
-        return_test_report = None
-        while not cls.TestReportsQueue.empty():
-            test_report: TestLiteTestReport = cls.TestReportsQueue.get()
-            if test_report.nodeid == nodeid:
-                return_test_report = test_report
-                break
-            else:
-                notincluded_elements.append(test_report)
-
-        if return_test_report is  None:
-            return_test_report = TestLiteTestReport(nodeid)
-        
-        for element in notincluded_elements:
-            cls.TestReportsQueue.put(element)
-        print('>END>>GETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORTGETTESTREPORT<<END<')
-        return return_test_report
+        test_report = cls.TestReports.get(nodeid)
+        if test_report is None:
+            return TestLiteTestReport(nodeid)
+        return test_report
     
     @classmethod
     def save_test_report(cls, TestReport: TestLiteTestReport):
-        print('>START>>SAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORT<<START<')
-        notincluded_elements = []
-        while not cls.TestReportsQueue.empty():
-            test_report: TestLiteTestReport = cls.TestReportsQueue.get()
-            if test_report.nodeid == TestReport.nodeid:
-                break
-            else:
-                notincluded_elements.append(test_report)
-                
-        for element in notincluded_elements:
-            cls.TestReportsQueue.put(element)
-        cls.TestReportsQueue.put(TestReport)
-        print('>END>>SAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORTSAVETESTREPORT<<END<')
-
-    
-    @classmethod
-    def save_current_queue(cls, id):
-        print('>START>>SAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUE<<START<')
-        with open(f'testreport_queue/{id}.txt', 'w') as file:
-            current_queue = []
-            while not cls.TestReportsQueue.empty():
-                test_report = cls.TestReportsQueue.get()
-                print(test_report)
-                current_queue.append(test_report)
-            for elem in current_queue:
-                cls.TestReportsQueue.put(elem)
-            file.write(str(current_queue))
-        print('<END<<SAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUESAVECURRENTQUEUE>>END>')
-                
+        cls.TestReports.update({
+            TestReport.nodeid: TestReport
+        })
         
 
 
@@ -177,21 +150,90 @@ class TestReportJSONEncoder(json.JSONEncoder):
             return item
         return super().default(o)
 
-        
 
 class TestLiteFinalReport:
 
-    @classmethod
-    def get_finall_report(cls):
-        test_reports = []
-        while not TestLiteTestReports.TestReportsQueue.empty():
-            test_reports.append(TestLiteTestReports.TestReportsQueue.get())
-        for item in test_reports:
-            TestLiteTestReports.TestReportsQueue.put(item)
-        return test_reports
+    def __init__(self, report):
+        self.report = report
+        self.json_report = None
 
-    @classmethod
-    def get_serialize_finall_report(cls):
-        return TestReportJSONEncoder().encode(cls.get_finall_report())
+    def __call__(self) -> list[TestLiteTestReport]:
+        return self.report
+    
+    def __repr__(self):
+        return str(self.report)
+    
+    def __iter__(self):
+        yield self.report
+
+    @property
+    def json(self):
+        if self.json_report is None:
+            self.json_report = TestReportJSONEncoder().encode(self.report)
+        return self.json_report
+    
+    def save_json_file(self, file_name):
+        with open(file_name, 'w') as file:
+            file.write(self.json)
+      
+
+class TestLiteReportManager:
+
+    def __init__(self):
+        self.reports = TestLiteTestReports().thr_context
+
+        if not os.path.exists(CONFIG.REPORTSDIRNAME):
+            os.mkdir(CONFIG.REPORTSDIRNAME)
+
+
+    def save_report(self):
+        match CONFIG.REPORTSSAVETYPE.upper():
+            case 'TXT':
+                self._save_report_as_txt_file()
+            case 'BINARY':
+                self._save_report_as_binary_file()
+        if CONFIG.DELETEREPORTSDIR:
+            shutil.rmtree(CONFIG.REPORTSDIRNAME)
+
+    def get_reports(self) -> TestLiteFinalReport:
+        report = None
+        match CONFIG.REPORTSSAVETYPE.upper():
+            case 'TXT':
+                report = self._read_reports_from_txt_files()
+            case 'BINARY':
+                report = self._read_reports_from_binary_files()
+
+        return TestLiteFinalReport(report)
+
+
+    def _save_report_as_txt_file(self):
+        with open(f'{CONFIG.REPORTSDIRNAME}/{str(threading.current_thread()).replace('<','').replace('>','')}.txt', 'w') as file:
+            file.write(self.reports)
+
+    
+    def _save_report_as_binary_file(self):
+        with open(f'{CONFIG.REPORTSDIRNAME}/{str(threading.current_thread()).replace('<','').replace('>','')}.data', 'wb') as file:
+            file.write(pickle.dumps(self.reports))
+    
+
+    def _read_reports_from_binary_files(self):
+        final_report = []
+        listdir = os.listdir(CONFIG.REPORTSDIRNAME)
+        for report_file_name in listdir:
+            with open(f'{CONFIG.REPORTSDIRNAME}/{report_file_name}', 'rb') as file:
+                final_report += [value for key, value in pickle.load(file).items()]
+        return final_report
+    
+    
+    def _read_reports_from_txt_files(self):
+        final_report = []
+        listdir = os.listdir(CONFIG.REPORTSDIRNAME)
+        for report_file_name in listdir:
+            with open(f'{CONFIG.REPORTSDIRNAME}/{report_file_name}', 'rb') as file:
+                final_report += [value for key, value in dict(file.read()).items()]
+        return final_report
+  
+
+
 
 
