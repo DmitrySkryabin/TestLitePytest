@@ -8,6 +8,7 @@ import pickle
 import os
 import shutil
 import threading
+import requests
 from enum import Enum
 from logger import Logger
 
@@ -17,27 +18,28 @@ log = Logger(__name__).get_logger()
 class CONFIG:
     REPORTSDIRNAME = 'TestLiteReports'
     DELETEREPORTSDIR = True
-    REPORTSSAVETYPE = 'TXT'
+    REPORTSSAVETYPE = 'BINARY'
+    TESTLITEURL = 'http://127.0.0.1:8000'
 
 
 
-def id(TestLite_id):
+def test_key(TestLite_id):
 
     def decorator(func):
         if getattr(func, '__pytest_wrapped__', None):
             function = func.__pytest_wrapped__.obj
         else:
             function = func
-        function.__TestLite_id__ = TestLite_id
+        function.__TestLite_testcase_key__ = TestLite_id
         return func
     
     return decorator
 
 
-def TestLite_id(item):
+def TestLite_testcase_key(item):
     return getattr(
         getattr(item, "obj", None),
-        "__TestLite_id__",
+        "__TestLite_testcase_key__",
         None
     )
 
@@ -65,7 +67,7 @@ class STATUS(str, Enum):
 @dataclasses.dataclass
 class TestLiteTestReport:
     nodeid: str
-    testcase_uuid: str = None
+    testcase_key: str = None
     status: str = None
     startime_timestamp: float = None
     stoptime_timestamp: float = None
@@ -79,10 +81,20 @@ class TestLiteTestReport:
 
     @property    
     def startime_readable(self):
-        return datetime.datetime.fromtimestamp(self.startime_timestamp)
+        if self.startime_timestamp is not None:
+            return datetime.datetime.fromtimestamp(self.startime_timestamp)
+        else:
+            return None
+        
     @property
     def stoptime_readable(self):
-        return datetime.datetime.fromtimestamp(self.stoptime_timestamp)
+        if self.stoptime_timestamp is not None:
+            return datetime.datetime.fromtimestamp(self.stoptime_timestamp)
+        else:
+            return None
+    
+    def add_log(self, log):
+        self.log = self.log + log
 
     def add_standart_data(self, report: pytest.TestReport):
         self.startime_timestamp = report.start
@@ -175,25 +187,33 @@ class TestLiteFinalReport:
     def save_json_file(self, file_name):
         with open(file_name, 'w') as file:
             file.write(self.json)
+
+    def send_json_in_TestLite(self):
+        response = requests.post(
+            url=f'{CONFIG.TESTLITEURL}/api/v1/project/CRM/testsuite/CRM-TS-2/save',
+            data=self.json,
+            headers={
+                'Content-Type': 'application/json'
+            }
+        )
       
 
 class TestLiteReportManager:
 
     def __init__(self):
         self.reports = TestLiteTestReports().thr_context
-
         if not os.path.exists(CONFIG.REPORTSDIRNAME):
             os.mkdir(CONFIG.REPORTSDIRNAME)
 
 
     def save_report(self):
+        log.info('SAVING REPORT')
         match CONFIG.REPORTSSAVETYPE.upper():
             case 'TXT':
                 self._save_report_as_txt_file()
             case 'BINARY':
                 self._save_report_as_binary_file()
-        if CONFIG.DELETEREPORTSDIR:
-            shutil.rmtree(CONFIG.REPORTSDIRNAME)
+
 
     def get_reports(self) -> TestLiteFinalReport:
         report = None
@@ -202,13 +222,16 @@ class TestLiteReportManager:
                 report = self._read_reports_from_txt_files()
             case 'BINARY':
                 report = self._read_reports_from_binary_files()
+        
+        if CONFIG.DELETEREPORTSDIR:
+            shutil.rmtree(CONFIG.REPORTSDIRNAME)
 
         return TestLiteFinalReport(report)
 
 
     def _save_report_as_txt_file(self):
         with open(f'{CONFIG.REPORTSDIRNAME}/{str(threading.current_thread()).replace('<','').replace('>','')}.txt', 'w') as file:
-            file.write(self.reports)
+            file.write(str(self.reports))
 
     
     def _save_report_as_binary_file(self):
