@@ -8,7 +8,7 @@ import pickle
 from logger import Logger
 from lite import TestLiteTestReports as TRs
 from lite import TestLiteTestReport as TR
-from lite import STATUS, TestLite_id, get_step_number_with_error, TestReportJSONEncoder, TestLiteFinalReport
+from lite import STATUS, TestLite_testcase_key, get_step_number_with_error, TestReportJSONEncoder, TestLiteFinalReport ,TestLiteReportManager
 
 log = Logger(__name__).get_logger()
 
@@ -31,6 +31,7 @@ def pytest_configure_node(node):
 
 def pytest_addoption(parser: pytest.Parser):
     parser.addoption('--runtest_show', action="store", default='False')
+    parser.addoption('--send_report', action='store', default='True')
     parser.addoption('--save_json', action='store', default=None)
 
 
@@ -39,55 +40,77 @@ def pytest_addoption(parser: pytest.Parser):
 def pytest_runtest_makereport(item, call):
     print('>>>pytest_runtest_makereportpytest_runtest_makereportpytest_runtest_makereportpytest_runtest_makereportpytest_runtest_makereport<<<<')
     outcome = yield
-    report:pytest.TestReport = outcome.get_result()
+    report: pytest.TestReport = outcome.get_result()
     log.info(f'CONFIG1: {item.config.TSTestReports}')
-    test_report = item.config.TSTestReports.get_test_report(report.nodeid)
+    test_report: TR = item.config.TSTestReports.get_test_report(report.nodeid)
+    test_report.testcase_key = TestLite_testcase_key(item)
     if report.when == 'setup':
         if report.skipped == True:
             print(f'SETUP is SKIPED')
             test_report.status = STATUS.SKIP
             test_report.skipreason = report.longrepr[2]
-            test_report.add_standart_data(report)
+            # test_report.add_standart_data(report)
+            test_report.startime_timestamp = report.start
+            test_report.stoptime_timestamp = report.stop
+            test_report.duration = report.duration
             # TRs().save_test_report(test_report)
         if report.failed == True:
             print(f'SETUP is FAILED')
             test_report.precondition_status = STATUS.ERROR
             test_report.status = STATUS.ERROR
             test_report.report = report.longreprtext
-            test_report.add_standart_data(report)
+            # test_report.add_standart_data(report)
+            test_report.startime_timestamp = report.start
+            test_report.stoptime_timestamp = report.stop
+            test_report.duration = report.duration
+            test_report.report = report.longreprtext
+            test_report.log = report.caplog
+            # test_report.add_log(report.caplog)
             # TRs().save_test_report(test_report)
         if report.passed == True:
             print(f'SETUP is PASSED')
             test_report.precondition_status = STATUS.PASSED
-            test_report.add_standart_data(report)
+            # test_report.add_standart_data(report)
+            test_report.startime_timestamp = report.start
+            # test_report.stoptime_timestamp = report.stop
+            # test_report.duration = report.duration
+            test_report.report = report.longreprtext
+            test_report.log = report.caplog
+            # test_report.add_log(report.caplog)
             # TRs().save_test_report(test_report)
 
     if test_report.status != STATUS.SKIP and report.when == 'call':
         if report.passed == True:
             print(f'CALL is PASSED')
             test_report.status = STATUS.PASSED
-            test_report.add_standart_data(report)
+            # test_report.add_standart_data(report)
+            test_report.report = report.longreprtext
+            test_report.log = report.caplog
             # TRs().save_test_report(test_report)
         if report.failed == True:
             print(f'CALL is FAILED')
             test_report.step_number_with_error = get_step_number_with_error(report.longreprtext)
             test_report.status = STATUS.FAIL
             test_report.report = report.longreprtext
-            test_report.add_standart_data(report)
+            test_report.log = report.caplog
+            # test_report.add_standart_data(report)
             # TRs().save_test_report(test_report)
             
 
     if test_report.status != STATUS.SKIP and report.when == 'teardown':
+        # print('TEARDOWN')
         # for line_number, test_code_line in enumerate(inspect.getsource(item.obj).split('\n')):
         #     print(f'{line_number}: {test_code_line}')
-        test_report.testcase_uuid = TestLite_id(item)
         if report.failed == True:
             print('TEARDOWN is FAILED')
             test_report.postcondition_status = STATUS.ERROR
         if report.passed == True:
             print('TEARDOWN is PASSED')
             test_report.postcondition_status = STATUS.PASSED
-        test_report.add_standart_data(report)
+        # test_report.add_standart_data(report)
+        test_report.report = report.longreprtext
+        test_report.log = report.caplog
+        test_report.stoptime_timestamp = report.stop
         # TRs().save_test_report(test_report)
     
     item.config.TSTestReports.save_test_report(test_report)  
@@ -175,16 +198,16 @@ def pytest_runtest_makereport(item, call):
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus):
     print('||||||||||||||||||||||||||||||||||||||||||SESSIONFINISH||||||||||||||||||||||||||||||||||||||||||||||')
-    TestLiteFinalReport().save_report_as_file()
     # session.config.FinalReport = pickle.dumps(pickle.loads(session.config.FinalReport) + TestLiteFinalReport().get_report_as_list())
     # log.info(f'SESSION_FINISH: {pickle.loads(session.config.FinalReport)}')
     if hasattr(session.config, "workerinput"):
-        TestLiteFinalReport().save_report_as_binary_file()
+        TestLiteReportManager().save_report()
     else:
-        final_report = TestLiteFinalReport().read_reports_from_binary_files()
+        final_report = TestLiteReportManager().get_reports()
         if session.config.getoption('--save_json') is not None:
-            with open(f'{session.config.getoption("--save_json")}', 'w') as file:
-                file.write(TestReportJSONEncoder().encode(final_report))
+            final_report.save_json_file(session.config.getoption("--save_json"))
+        if session.config.getoption('--send_report') == 'True':
+            final_report.send_json_in_TestLite()
     # json_report = TestLiteFinalReport.get_serialize_finall_report()
     # print(json_report)
     # if session.config.getoption('--save_json') is not None:
