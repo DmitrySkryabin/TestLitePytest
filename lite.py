@@ -71,13 +71,23 @@ class TestLiteTestReport:
     status: str = None
     startime_timestamp: float = None
     stoptime_timestamp: float = None
-    duration: float = None
+    # duration: float = None
     report: str = None
     log: str = None
     skipreason: str = None
     precondition_status: str = None
     postcondition_status: str = None
     step_number_with_error: int = None
+
+
+    @property
+    def duration(self):
+        if self.stoptime_timestamp is not None:
+            return round(self.stoptime_timestamp - self.startime_timestamp, 2)
+            # return f'{(self.stoptime_timestamp - self.startime_timestamp):.2f}'
+        else:
+            return None
+
 
     @property    
     def startime_readable(self):
@@ -158,6 +168,7 @@ class TestReportJSONEncoder(json.JSONEncoder):
             item.update({
                 'startime_readable': str(o.startime_readable),
                 'stoptime_readable': str(o.stoptime_readable), 
+                'duration': float(o.duration)
             })
             return item
         return super().default(o)
@@ -188,9 +199,9 @@ class TestLiteFinalReport:
         with open(file_name, 'w') as file:
             file.write(self.json)
 
-    def send_json_in_TestLite(self):
+    def send_json_in_TestLite(self, testsuite):
         response = requests.post(
-            url=f'{CONFIG.TESTLITEURL}/api/v1/project/CRM/testsuite/CRM-TS-2/save',
+            url=f'{CONFIG.TESTLITEURL}/api/v1/project/{testsuite.split("-")[0]}/testsuite/{testsuite}/save',
             data=self.json,
             headers={
                 'Content-Type': 'application/json'
