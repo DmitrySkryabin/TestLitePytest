@@ -1,17 +1,9 @@
 import pytest 
-import inspect
-import json
-import random
-import shutil
-import os
-import pickle
-from logger import Logger
-from lite import TestLiteTestReports as TRs
-from lite import TestLiteTestReport as TR
-from lite import STATUS, TestLite_testcase_key, get_step_number_with_error, TestReportJSONEncoder, TestLiteFinalReport ,TestLiteReportManager
-
-log = Logger(__name__).get_logger()
-
+from TestLite._reports import TestLiteTestReports as TRs
+from TestLite._reports import TestLiteTestReport as TR
+from TestLite._reports import TestLiteReportManager
+from TestLite._models import STATUS
+from TestLite._Testlite import TestLite_testcase_key, get_step_number_with_error
 
 
 def pytest_configure(config):
@@ -20,7 +12,6 @@ def pytest_configure(config):
 
 
 def pytest_addoption(parser: pytest.Parser):
-    parser.addoption('--runtest_show', action="store", default='False')
     parser.addoption('--testsuite', action='store')
     parser.addoption('--save_json', action='store', default=None)
 
@@ -42,11 +33,6 @@ def pytest_runtest_makereport(item, call):
             test_report.startime_timestamp = report.start
             test_report.stoptime_timestamp = report.stop
 
-            # test_report.add_standart_data(report)
-            # test_report.startime_timestamp = report.start
-            # test_report.stoptime_timestamp = report.stop
-            # test_report.duration = report.duration
-            # TRs().save_test_report(test_report)
 
         if report.failed == True:
             test_report.precondition_status = STATUS.ERROR
@@ -56,60 +42,33 @@ def pytest_runtest_makereport(item, call):
             test_report.startime_timestamp = report.start
             test_report.stoptime_timestamp = report.stop
 
-            # test_report.add_standart_data(report)
-            # test_report.startime_timestamp = report.start
-            # test_report.stoptime_timestamp = report.stop
-            # test_report.duration = report.duration
-            # test_report.report = report.longreprtext
-            # test_report.log = report.caplog
-            # test_report.add_log(report.caplog)
-            # TRs().save_test_report(test_report)
 
         if report.passed == True:
             test_report.precondition_status = STATUS.PASSED
 
             test_report.startime_timestamp = report.start
 
-            # test_report.add_standart_data(report)
-            # test_report.startime_timestamp = report.start
-            # # test_report.stoptime_timestamp = report.stop
-            # # test_report.duration = report.duration
-            # test_report.report = report.longreprtext
-            # test_report.log = report.caplog
-            # test_report.add_log(report.caplog)
-            # TRs().save_test_report(test_report)
 
     if test_report.status != STATUS.SKIP and report.when == 'call':
         if report.passed == True:
             test_report.status = STATUS.PASSED
 
-            # test_report.add_standart_data(report)
-            # test_report.report = report.longreprtext
-            # test_report.log = report.caplog
-            # TRs().save_test_report(test_report)
 
         if report.failed == True:
             test_report.step_number_with_error = get_step_number_with_error(report.longreprtext)
             test_report.status = STATUS.FAIL
             test_report.report = report.longreprtext
-            # test_report.log = report.caplog
-            # test_report.add_standart_data(report)
-            # TRs().save_test_report(test_report)
-            
+
 
     if test_report.status != STATUS.SKIP and report.when == 'teardown':
         if report.failed == True:
-            print('TEARDOWN is FAILED')
             test_report.postcondition_status = STATUS.ERROR
             test_report.report = report.longreprtext
         if report.passed == True:
-            print('TEARDOWN is PASSED')
             test_report.postcondition_status = STATUS.PASSED
 
-        # test_report.report = report.longreprtext
         test_report.log = report.caplog
         test_report.stoptime_timestamp = report.stop
-        # test_report.add_standart_data(report)
 
     item.config.TSTestReports.save_test_report(test_report)  
 
