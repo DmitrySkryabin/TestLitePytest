@@ -3,7 +3,8 @@ from setuptools import setup, find_packages
 setup(
     name='TestLitePytest',  # Replace with your package’s name
     version='0.1.0',
-    packages=find_packages(),
+    package_dir={"": "src"},
+    packages=['testlite_pytest', 'testlite'],
     install_requires=[
         'requests>=2.32.3',
         'pytest>=8.3.2'

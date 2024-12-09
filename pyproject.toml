@@ -41,4 +41,4 @@ dependencies = [
 [project.urls]
 Repository = "https://github.com/DmitrySkryabin/TestLitePytest"
 [project.entry-points.pytest11]
-TestLitePytest = "testlitepytest.plugin"
+TestLitePytest = "testlite_pytest.plugin"

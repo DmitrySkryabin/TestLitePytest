@@ -1,3 +1,3 @@
-from TestLite import (
+from .TestLite import (
     test_key
 )

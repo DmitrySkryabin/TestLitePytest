@@ -31,12 +31,6 @@ def pytest_configure(config):
 
 
 
-# def pytest_addoption(parser: pytest.Parser):
-#     parser.addoption('--testsuite', action='store')
-#     parser.addoption('--save_json', action='store', default=None)
-
-
-
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     outcome = yield

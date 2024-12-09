@@ -1,7 +1,7 @@
 import json
 from dataclasses import asdict
 
-from TestLite._models import TestLiteTestReport
+from ._models import TestLiteTestReport
 
 
 class TestReportJSONEncoder(json.JSONEncoder):
