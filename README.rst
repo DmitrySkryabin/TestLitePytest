@@ -10,9 +10,6 @@ pytest-TestLitePytest
     :target: https://pypi.org/project/TestLitePytest
     :alt: Python versions
 
-.. image:: https://github.com/DmitrySkryabin/TestLitePytest/actions/workflows/main.yml/badge.svg
-    :target: https://github.com/DmitrySkryabin/TestLitePytest/actions/workflows/main.yml
-    :alt: See Build Status on GitHub Actions
 
 Pytest adaptor for TestLite TMS system
 
