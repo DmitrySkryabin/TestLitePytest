@@ -3,12 +3,14 @@ import datetime
 import json
 import dataclasses
 import queue
+import re
 import random
 import pickle
 import os
 import shutil
 import threading
 import requests
+import traceback
 from enum import Enum
 from logger import Logger
 
@@ -65,19 +67,94 @@ class STATUS(str, Enum):
 
 
 @dataclasses.dataclass
+class FixtureRunResult:
+    result: str = None # Что возвращает фикстура
+    status: STATUS = None
+    error: str = None
+
+
+@dataclasses.dataclass
+class TestLiteFixtureReport:
+    id: str
+    nodeid: str 
+    name: str = None
+    cached_result: tuple = None
+    before_start_time: float = None
+    before_stop_time: float = None
+    after_start_time: float = None
+    after_stop_time: float = None
+
+    _after_error = None
+
+    @property
+    def before_duration(self):
+        if self.before_stop_time is not None:
+            return self.before_stop_time - self.before_start_time
+        else:
+            return 0 - self.before_start_time
+    
+    @property
+    def after_duration(self):
+        if self.after_stop_time is not None and self.after_start_time is not None:
+            return self.after_stop_time - self.after_start_time
+        else:
+            return None
+        
+    @property
+    def before_status(self):
+        if self.cached_result[2] is None:
+            return FixtureRunResult(
+                result=self.cached_result[0],
+                status=STATUS.PASSED
+            )
+        else:
+            return FixtureRunResult(
+                status=STATUS.ERROR,
+                error=self.cached_result[2]
+            )
+    
+    @property
+    def after_status(self):
+        return self._after_error
+    
+    @after_status.setter
+    def after_status(self, exc_val):
+        if exc_val is not None:
+            self._after_error = FixtureRunResult(
+                status=STATUS.ERROR,
+                error=exc_val
+            )
+        else:
+            self._after_error = FixtureRunResult(
+                status=STATUS.PASSED
+            )
+
+
+
+@dataclasses.dataclass
 class TestLiteTestReport:
     nodeid: str
     testcase_key: str = None
     status: str = None
     startime_timestamp: float = None
     stoptime_timestamp: float = None
-    # duration: float = None
     report: str = None
     log: str = None
+    params: str = None
     skipreason: str = None
     precondition_status: str = None
     postcondition_status: str = None
     step_number_with_error: int = None
+    
+    # _fixtures: dict = None
+
+    @property
+    def parametrize_name(self):
+        name = re.search('\[.*\]', self.nodeid)
+        if name is None:
+            return None
+        else:
+            return name[0]
 
 
     @property
@@ -102,6 +179,21 @@ class TestLiteTestReport:
             return datetime.datetime.fromtimestamp(self.stoptime_timestamp)
         else:
             return None
+
+    @property
+    def fixtures(self):
+        fixture_dict = {
+            'before': [],
+            'after': []
+        }
+        fixtures = TestLiteFixtureReports.get_all_fixtures_by_nodeid(self.nodeid)
+        for fixture in fixtures:
+            fixture_dict['before'].append(fixture)
+            if fixture.after_duration is not None:
+                fixture_dict['after'].append(fixture)
+
+        return fixture_dict
+
     
     def add_log(self, log):
         self.log = self.log + log
@@ -113,7 +205,6 @@ class TestLiteTestReport:
         self.log = report.caplog
 
 
-
 class TestLiteTestReportsMetaClass(type):
     _instances = {}
     def __call__(cls, *args, **kwargs):
@@ -121,6 +212,55 @@ class TestLiteTestReportsMetaClass(type):
             cls._instances[cls] = super().__call__(*args, **kwargs)
         return cls._instances[cls]
  
+
+
+class TestLiteFixtureReports:
+    # Ебани сюда пикл и проверь, а потом еще добавь хуету чтобы вконце все потоки соединили свою хуету в одну хуету
+    __metaclass__ = TestLiteTestReportsMetaClass
+
+    FixtureReports:dict[str, TestLiteFixtureReport] = {}
+    save_pickle_file = 'TestLiteTemp'
+    TestReportsQueue = queue.Queue()
+    counter = 1
+    thread_list = []
+
+    @property
+    def thr_context(self) -> dict[str, TestLiteTestReport]|dict[None]:
+        if self._thr == threading.current_thread():
+            return self.TestReports
+        else:
+            return {}
+
+    def __init__(self):
+        self._thr = threading.current_thread()
+        log.info(f'_thr: {self._thr}')
+
+
+    @classmethod
+    def get_all_fixtures_by_nodeid(cls, nodeid):
+        return [item for item in cls.FixtureReports.values() if item.nodeid == nodeid]
+        
+
+    @classmethod    
+    def get_fixture_report(cls, id: str, nodeid: str):
+        '''
+        id - уникальный идентификатор именно этой фикстуры для этого теста
+        '''
+        fixture_report = cls.FixtureReports.get(id)
+        if fixture_report is None:
+            return TestLiteFixtureReport(id=id, nodeid=nodeid)
+        return fixture_report
+    
+    @classmethod
+    def save_fixture_report(cls, id,  FixtureReport: TestLiteFixtureReport):
+        '''
+        id - уникальный идентификатор именно этой фикстуры для этого теста
+        '''
+        cls.FixtureReports.update({
+            id: FixtureReport
+        })
+
+
 
 class TestLiteTestReports:
     # Ебани сюда пикл и проверь, а потом еще добавь хуету чтобы вконце все потоки соединили свою хуету в одну хуету
@@ -159,6 +299,60 @@ class TestLiteTestReports:
         })
         
 
+class MakeDict():
+
+    def __init__(self):
+        self.remake_object = None
+
+
+    def _make_dict_from_FixtureRunResult(self, obj):
+        if isinstance(obj, FixtureRunResult):
+            item = dataclasses.asdict(obj)
+            item.update({
+                'error': "".join(traceback.format_exception_only(type(obj.error), obj.error)).strip() if obj.error is not None else None
+            })
+            return item
+        else:
+            raise Exception('Its not a FixtureRunResult clas')
+    
+
+    def remake(self, obj, key):
+        if isinstance(obj, TestLiteFixtureReport):
+            item = {}
+            if key == 'before':
+                item.update({
+                    'name': obj.name,
+                    'start_time': obj.before_start_time,
+                    'stop_time': obj.before_stop_time,
+                    'duration': obj.before_duration,
+                    'status': self._make_dict_from_FixtureRunResult(obj.before_status)
+                    # 'status': dataclasses.asdict(obj.before_status),
+                    # 'result:': obj.cached_result[0]
+                })
+            if key == 'after':
+                item.update({
+                    'name': obj.name,
+                    'start_time': obj.after_start_time,
+                    'stop_time': obj.after_stop_time,
+                    'duration': obj.after_duration,
+                    'status': self._make_dict_from_FixtureRunResult(obj.after_status)
+                    # 'status': dataclasses.asdict(obj.after_status)
+                })
+            return item
+        else:
+            raise Exception('Its not TestLiteFixtureReport class')
+
+    def make_pure_dict_from_fixtures_dict(self, fixtures_dict):
+        self.remake_object = fixtures_dict
+        if isinstance(self.remake_object, dict):
+            for key, value in self.remake_object.items():
+                for i, item in enumerate(value):
+                    self.remake_object[key][i] = self.remake(item, key)
+            return self.remake_object
+        else:
+            raise Exception('Its not a dict')
+        
+
 
 class TestReportJSONEncoder(json.JSONEncoder):
 
@@ -166,12 +360,15 @@ class TestReportJSONEncoder(json.JSONEncoder):
         if isinstance(o, TestLiteTestReport):
             item = dataclasses.asdict(o)
             item.update({
+                'parametrize_name': str(o.parametrize_name),
                 'startime_readable': str(o.startime_readable),
                 'stoptime_readable': str(o.stoptime_readable), 
-                'duration': float(o.duration)
+                'duration': float(o.duration),
+                'fixtures': MakeDict().make_pure_dict_from_fixtures_dict(o.fixtures)
             })
             return item
         return super().default(o)
+    
 
 
 class TestLiteFinalReport:
