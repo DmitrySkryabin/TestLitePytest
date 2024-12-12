@@ -2,16 +2,16 @@
 pytest-TestLitePytest
 =====================
 
-.. image:: https://img.shields.io/pypi/v/pytest-TestLitePytest.svg
-    :target: https://pypi.org/project/pytest-TestLitePytest
+.. image:: https://img.shields.io/pypi/v/TestLitePytest.svg
+    :target: https://pypi.org/project/TestLitePytest
     :alt: PyPI version
 
-.. image:: https://img.shields.io/pypi/pyversions/pytest-TestLitePytest.svg
-    :target: https://pypi.org/project/pytest-TestLitePytest
+.. image:: https://img.shields.io/pypi/pyversions/TestLitePytest.svg
+    :target: https://pypi.org/project/TestLitePytest
     :alt: Python versions
 
-.. image:: https://github.com/DmitrySkryabin/pytest-TestLitePytest/actions/workflows/main.yml/badge.svg
-    :target: https://github.com/DmitrySkryabin/pytest-TestLitePytest/actions/workflows/main.yml
+.. image:: https://github.com/DmitrySkryabin/TestLitePytest/actions/workflows/main.yml/badge.svg
+    :target: https://github.com/DmitrySkryabin/TestLitePytest/actions/workflows/main.yml
     :alt: See Build Status on GitHub Actions
 
 Pytest adaptor for TestLite TMS system
