@@ -1,7 +1,13 @@
 import pytest
-from testlite._reports import TestLiteTestReports as TRs
-from testlite._reports import TestLiteTestReport as TR
-from testlite._reports import TestLiteReportManager
+from testlite._reports import (
+    TestLiteTestReport,
+    TestLiteTestReports,
+    TestLiteFixtureReport,
+    TestLiteFixtureReports,
+    TestLiteReportManager
+)
+from testlite._reports import fixture_after_save
+from testlite._helper import get_time
 from testlite._models import STATUS
 from testlite._Testlite import TestLite_testcase_key, get_step_number_with_error
 
@@ -27,13 +33,7 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
-    config.TSTestReports = TRs()
-
-
-
-# def pytest_addoption(parser: pytest.Parser):
-#     parser.addoption('--testsuite', action='store')
-#     parser.addoption('--save_json', action='store', default=None)
+    config.TSTestReports = TestLiteTestReports
 
 
 
@@ -41,11 +41,14 @@ def pytest_configure(config):
 def pytest_runtest_makereport(item, call):
     outcome = yield
     report: pytest.TestReport = outcome.get_result()
-    test_report: TR = item.config.TSTestReports.get_test_report(report.nodeid)
+    test_report: TestLiteTestReport = item.config.TSTestReports.get_test_report(report.nodeid)
     test_report.testcase_key = TestLite_testcase_key(item)
 
 
     if report.when == 'setup':
+
+        test_report.params = item.callspec.params if hasattr(item, 'callspec') else None
+
         if report.skipped == True:
             test_report.status = STATUS.SKIP
             test_report.skipreason = report.longrepr[2]
@@ -91,6 +94,43 @@ def pytest_runtest_makereport(item, call):
         test_report.stoptime_timestamp = report.stop
 
     item.config.TSTestReports.save_test_report(test_report)  
+
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_fixture_setup(fixturedef, request):
+    if fixturedef.baseid != '':
+        test_function_name = str(request._pyfuncitem).split(' ')[1][:-1]
+        id = f'{test_function_name}::{request.fixturename}'
+        nodeid = f'{fixturedef.baseid}::{test_function_name}'
+
+        fixture_report = TestLiteFixtureReports.get_fixture_report(id, nodeid)
+        fixture_report.before_start_time = get_time()
+        TestLiteFixtureReports.save_fixture_report(id, fixture_report)
+
+        outcome = yield
+
+        finalizers = getattr(fixturedef, '_finalizers', [])
+        for index, finalizer in enumerate(finalizers):
+            finalizers[index] = fixture_after_save(finalizer, id, nodeid)
+            
+        fixture_report.before_stop_time = get_time()
+        TestLiteFixtureReports.save_fixture_report(id, fixture_report)
+    else:
+        yield
+
+
+
+def pytest_fixture_post_finalizer(fixturedef, request):
+    if fixturedef.baseid != '':
+        test_function_name = str(request._pyfuncitem).split(' ')[1][:-1]
+        id = f'{test_function_name}::{request.fixturename}'
+        nodeid = f'{fixturedef.baseid}::{test_function_name}'
+        fixture_report = TestLiteFixtureReports.get_fixture_report(id, nodeid)
+        fixture_report.name = request.fixturename
+        fixture_report.cached_result = fixturedef.cached_result
+        TestLiteFixtureReports.save_fixture_report(id, fixture_report)
+
 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus):

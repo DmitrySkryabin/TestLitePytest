@@ -1,30 +1,103 @@
 import os
+import time
 import shutil
 import pickle
 import threading
 import requests
 
 from ._config import CONFIG
-from ._models import TestLiteTestReport
+from ._helper import get_time
+from ._models import TestLiteTestReport, TestLiteFixtureReport
 from ._serializers import TestReportJSONEncoder
 
 
 
-class TestLiteTestReportsMetaClass(type):
+class fixture_after_save:
+    
+    def __init__(self, fixture_function, id, nodeid):
+        self.fixture_function = fixture_function
+        self.id = id
+        self.nodeid = nodeid
+        self.fixture_report = TestLiteFixtureReports.get_fixture_report(id, nodeid)
+
+
+    def __call__(self, *args, **kwargs):
+        with self:
+            return self.fixture_function(*args, **kwargs)
+        
+
+    def __enter__(self):
+        self.fixture_report.after_start_time = get_time()
+        TestLiteFixtureReports.save_fixture_report(self.id, self.fixture_report)
+
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.fixture_report.after_stop_time = get_time()
+        self.fixture_report.after_status = exc_val
+        TestLiteFixtureReports.save_fixture_report(self.id, self.fixture_report)
+
+
+
+class SingletonMetaClass(type):
     _instances = {}
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
             cls._instances[cls] = super().__call__(*args, **kwargs)
         return cls._instances[cls]
+    
+
+
+class TestLiteFixtureReports:
+
+    __metaclass__ = SingletonMetaClass
+    FixtureReports:dict[str, TestLiteFixtureReport] = {}
+
+
+    @property
+    def thr_context(self) -> dict[str, TestLiteTestReport]|dict[None]:
+        if self._thr == threading.current_thread():
+            return self.FixtureReports
+        else:
+            return {}
+        
+
+    def __init__(self):
+        self._thr = threading.current_thread()
+
+
+    @classmethod
+    def get_all_fixtures_by_nodeid(cls, nodeid):
+        return [item for item in cls.FixtureReports.values() if item.nodeid == nodeid]
+        
+
+    @classmethod    
+    def get_fixture_report(cls, id: str, nodeid: str):
+        '''
+        id - уникальный идентификатор именно этой фикстуры для этого теста
+        '''
+        fixture_report = cls.FixtureReports.get(id)
+        if fixture_report is None:
+            return TestLiteFixtureReport(id=id, nodeid=nodeid)
+        return fixture_report
+    
+
+    @classmethod
+    def save_fixture_report(cls, id,  FixtureReport: TestLiteFixtureReport):
+        '''
+        id - уникальный идентификатор именно этой фикстуры для этого теста
+        '''
+        cls.FixtureReports.update({
+            id: FixtureReport
+        })
  
 
+
 class TestLiteTestReports:
-    # Ебани сюда пикл и проверь, а потом еще добавь хуету чтобы вконце все потоки соединили свою хуету в одну хуету
-    __metaclass__ = TestLiteTestReportsMetaClass
+
+    __metaclass__ = SingletonMetaClass
 
     TestReports:dict[str, TestLiteTestReport] = {}
     save_pickle_file = 'TestLiteTemp'
-    # thread_list = []
 
 
     @property
