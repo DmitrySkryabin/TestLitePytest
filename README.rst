@@ -1,5 +1,5 @@
 =====================
-pytest-TestLitePytest
+TestLitePytest
 =====================
 
 .. image:: https://img.shields.io/pypi/v/TestLitePytest.svg
