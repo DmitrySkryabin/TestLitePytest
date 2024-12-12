@@ -13,15 +13,73 @@ import requests
 import traceback
 from enum import Enum
 from logger import Logger
+import configparser
 
 log = Logger(__name__).get_logger()
 
 
+class SsingletonMetaClass(type):
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super().__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
 class CONFIG:
-    REPORTSDIRNAME = 'TestLiteReports'
-    DELETEREPORTSDIR = True
-    REPORTSSAVETYPE = 'BINARY'
-    TESTLITEURL = 'http://127.0.0.1:8000'
+    __metaclass__ = SsingletonMetaClass
+
+    _REPORTSDIRNAME = 'TestLiteReports'
+    _DELETEREPORTSDIR = True
+    _REPORTSSAVETYPE = 'BINARY'
+    _TESTLITEURL = 'http://127.0.0.1:8000'
+
+    def __init__(self):
+        self.config = configparser.ConfigParser()
+        if os.path.exists('TestLiteConfig.ini'):
+            self.have_config_file = True
+            self.config.read('TestLiteConfig.ini')
+        else:
+            self.have_config_file = False
+ 
+    @property
+    def TESTLITEURL(self):
+        config_value = self.config.get('TestLiteConfig', 'TESTLITEURL', fallback=None)
+        print(f'CONFIG: {config_value}')
+        if config_value is not None:
+            return config_value
+        else:
+            return self._TESTLITEURL
+        
+
+    @property
+    def DELETEREPORTSDIR(self):
+        config_value = self.config.get('TestLiteConfig', 'DELETEREPORTSDIR', fallback=None)
+        print(f'CONFIG: {config_value}')
+        if config_value is not None:
+            return config_value
+        else:
+            return self._DELETEREPORTSDIR
+        
+
+    @property
+    def REPORTSDIRNAME(self):
+        config_value = self.config.get('TestLiteConfig', 'REPORTSDIRNAME', fallback=None)
+        print(f'CONFIG: {config_value}')
+        if config_value is not None:
+            return config_value
+        else:
+            return self._REPORTSDIRNAME
+        
+
+    @property
+    def REPORTSSAVETYPE(self):
+        config_value = self.config.get('TestLiteConfig', 'REPORTSSAVETYPE', fallback=None)
+        print(f'CONFIG: {config_value}')
+        if config_value is not None:
+            return config_value
+        else:
+            return self._REPORTSSAVETYPE
 
 
 
@@ -398,7 +456,7 @@ class TestLiteFinalReport:
 
     def send_json_in_TestLite(self, testsuite):
         response = requests.post(
-            url=f'{CONFIG.TESTLITEURL}/api/v1/project/{testsuite.split("-")[0]}/testsuite/{testsuite}/save',
+            url=f'{CONFIG().TESTLITEURL}/api/v1/project/{testsuite.split("-")[0]}/testsuite/{testsuite}/save',
             data=self.json,
             headers={
                 'Content-Type': 'application/json'
@@ -410,13 +468,13 @@ class TestLiteReportManager:
 
     def __init__(self):
         self.reports = TestLiteTestReports().thr_context
-        if not os.path.exists(CONFIG.REPORTSDIRNAME):
-            os.mkdir(CONFIG.REPORTSDIRNAME)
+        if not os.path.exists(CONFIG().REPORTSDIRNAME):
+            os.mkdir(CONFIG().REPORTSDIRNAME)
 
 
     def save_report(self):
         log.info('SAVING REPORT')
-        match CONFIG.REPORTSSAVETYPE.upper():
+        match CONFIG().REPORTSSAVETYPE.upper():
             case 'TXT':
                 self._save_report_as_txt_file()
             case 'BINARY':
@@ -425,42 +483,42 @@ class TestLiteReportManager:
 
     def get_reports(self) -> TestLiteFinalReport:
         report = None
-        match CONFIG.REPORTSSAVETYPE.upper():
+        match CONFIG().REPORTSSAVETYPE.upper():
             case 'TXT':
                 report = self._read_reports_from_txt_files()
             case 'BINARY':
                 report = self._read_reports_from_binary_files()
         
-        if CONFIG.DELETEREPORTSDIR:
-            shutil.rmtree(CONFIG.REPORTSDIRNAME)
+        if CONFIG().DELETEREPORTSDIR:
+            shutil.rmtree(CONFIG().REPORTSDIRNAME)
 
         return TestLiteFinalReport(report)
 
 
     def _save_report_as_txt_file(self):
-        with open(f'{CONFIG.REPORTSDIRNAME}/{str(threading.current_thread()).replace('<','').replace('>','')}.txt', 'w') as file:
+        with open(f'{CONFIG().REPORTSDIRNAME}/{str(threading.current_thread()).replace('<','').replace('>','')}.txt', 'w') as file:
             file.write(str(self.reports))
 
     
     def _save_report_as_binary_file(self):
-        with open(f'{CONFIG.REPORTSDIRNAME}/{str(threading.current_thread()).replace('<','').replace('>','')}.data', 'wb') as file:
+        with open(f'{CONFIG().REPORTSDIRNAME}/{str(threading.current_thread()).replace('<','').replace('>','')}.data', 'wb') as file:
             file.write(pickle.dumps(self.reports))
     
 
     def _read_reports_from_binary_files(self):
         final_report = []
-        listdir = os.listdir(CONFIG.REPORTSDIRNAME)
+        listdir = os.listdir(CONFIG().REPORTSDIRNAME)
         for report_file_name in listdir:
-            with open(f'{CONFIG.REPORTSDIRNAME}/{report_file_name}', 'rb') as file:
+            with open(f'{CONFIG().REPORTSDIRNAME}/{report_file_name}', 'rb') as file:
                 final_report += [value for key, value in pickle.load(file).items()]
         return final_report
     
     
     def _read_reports_from_txt_files(self):
         final_report = []
-        listdir = os.listdir(CONFIG.REPORTSDIRNAME)
+        listdir = os.listdir(CONFIG().REPORTSDIRNAME)
         for report_file_name in listdir:
-            with open(f'{CONFIG.REPORTSDIRNAME}/{report_file_name}', 'rb') as file:
+            with open(f'{CONFIG().REPORTSDIRNAME}/{report_file_name}', 'rb') as file:
                 final_report += [value for key, value in dict(file.read()).items()]
         return final_report
   

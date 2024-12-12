@@ -31,14 +31,6 @@ def pytest_addoption(parser: pytest.Parser):
     parser.addoption('--save_json', action='store', default=None)
 
 
-def pytest_addhooks(pluginmanager):
-    import pluggy
-    from self_hooks import TestLiteDeveloperHooksImpl, TestLiteDeveloperHooksSpec
-    pm = pluggy.PluginManager('testlitepytest')
-    pluginmanager.add_hookspecs(TestLiteDeveloperHooksSpec)
-    pluginmanager.register(TestLiteDeveloperHooksImpl())
-
-
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
