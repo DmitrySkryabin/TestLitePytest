@@ -21,24 +21,13 @@ Pytest adaptor for TestLite TMS system
 This `pytest`_ plugin was generated with `Cookiecutter`_ along with `@hackebrot`_'s `cookiecutter-pytest-plugin`_ template.
 
 
-Features
---------
-
-* TODO
-
-
-Requirements
-------------
-
-* TODO
-
 
 Installation
 ------------
 
 You can install "pytest-TestLitePytest" via `pip`_ from `PyPI`_::
 
-    $ pip install pytest-TestLitePytest
+    $ pip install TestLitePytest
 
 
 Usage

@@ -1,5 +1,4 @@
 
-
 def test_key(TestLite_id):
 
     def decorator(func):

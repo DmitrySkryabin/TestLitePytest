@@ -1,4 +1,5 @@
 
+    
 def TestLite_testcase_key(item):
     return getattr(
         getattr(item, "obj", None),
