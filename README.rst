@@ -30,13 +30,13 @@ You can install "pytest-TestLitePytest" via `pip`_ from `PyPI`_::
     $ pip install TestLitePytest
 
 
-Usage
------
-
-## Initial setup
+Initial setup
+-------------
 
 To use, create a config file: "TestLiteConfig.ini" (be sure to use this name, otherwise you will not find the configuration file)
 
+::
+    
     [TestLiteConfig]
     TESTLITEURL=http://TestLite.test (The address where your TestLite is located)
     DELETEREPORTSDIR=True/False (Save folder with reports) (Default: True)
@@ -44,37 +44,38 @@ To use, create a config file: "TestLiteConfig.ini" (be sure to use this name, ot
     REPORTSSAVETYPE=BINARY/TXT (In what format to save reports) (Default: BINARY) (TXT doesn't work))
 
 
-## Use in your tests
+Use in your tests
+-----------------
 
-   
+::   
     import  testlite
     
-	    class  TestWithTestLite:
-		    @testlite.test_key('PROJECT-TC-1')
-			def  test_1(self):
-				pass
-				
-			@testlite.test_key('PROJECT-TC-2')
-			def  test_2(self):
+	class  TestWithTestLite:
+
+		@testlite.test_key('PROJECT-TC-1')
+		def  test_1(self):
 			pass
+				
+		@testlite.test_key('PROJECT-TC-2')
+		def  test_2(self):
+		pass
+
 Where "PROJECT-TC-1" its test case key in TestLite
 
-## Command Line Arguments
+Command Line Arguments
+----------------------
 
 --testsuite=PROJECT-TS-1 (TestSuite key in TestLite)
 --save_json=json_report.json (If so, save the file with the report.)
 
 If you specify testsuite then TestLitePytest will try to send a report to your TestLite that you specified
 
-Contributing
-------------
-Contributions are very welcome. Tests can be run with `tox`_, please ensure
-the coverage at least stays the same before you submit a pull request.
+
 
 License
 -------
 
-Distributed under the terms of the `MIT`_ license, "pytest-TestLitePytest" is free and open source software
+Distributed under the terms of the `MIT`_ license, "TestLitePytest" is free and open source software
 
 
 Issues
