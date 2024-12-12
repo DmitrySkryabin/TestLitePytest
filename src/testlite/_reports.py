@@ -120,8 +120,10 @@ class TestLiteTestReports:
     
     @classmethod
     def save_test_report(cls, TestReport: TestLiteTestReport):
+        test_report = TestReport
+        test_report._fixturelist = TestLiteFixtureReports.get_all_fixtures_by_nodeid(TestReport.nodeid)
         cls.TestReports.update({
-            TestReport.nodeid: TestReport
+            TestReport.nodeid: test_report
         })
         
 
@@ -153,7 +155,7 @@ class TestLiteFinalReport:
 
     def send_json_in_TestLite(self, testsuite):
         response = requests.post(
-            url=f'{CONFIG.TESTLITEURL}/api/v1/project/{testsuite.split("-")[0]}/testsuite/{testsuite}/save',
+            url=f'{CONFIG().TESTLITEURL}/api/v1/project/{testsuite.split("-")[0]}/testsuite/{testsuite}/save',
             data=self.json,
             headers={
                 'Content-Type': 'application/json'
@@ -165,12 +167,12 @@ class TestLiteReportManager:
 
     def __init__(self):
         self.reports = TestLiteTestReports().thr_context
-        if not os.path.exists(CONFIG.REPORTSDIRNAME):
-            os.mkdir(CONFIG.REPORTSDIRNAME)
+        if not os.path.exists(CONFIG().REPORTSDIRNAME):
+            os.mkdir(CONFIG().REPORTSDIRNAME)
 
 
     def save_report(self):
-        match CONFIG.REPORTSSAVETYPE.upper():
+        match CONFIG().REPORTSSAVETYPE.upper():
             case 'TXT':
                 self._save_report_as_txt_file()
             case 'BINARY':
@@ -179,41 +181,41 @@ class TestLiteReportManager:
 
     def get_reports(self) -> TestLiteFinalReport:
         report = None
-        match CONFIG.REPORTSSAVETYPE.upper():
+        match CONFIG().REPORTSSAVETYPE.upper():
             case 'TXT':
                 report = self._read_reports_from_txt_files()
             case 'BINARY':
                 report = self._read_reports_from_binary_files()
         
-        if CONFIG.DELETEREPORTSDIR:
-            shutil.rmtree(CONFIG.REPORTSDIRNAME)
+        if CONFIG().DELETEREPORTSDIR:
+            shutil.rmtree(CONFIG().REPORTSDIRNAME)
 
         return TestLiteFinalReport(report)
 
 
     def _save_report_as_txt_file(self):
-        with open(f'{CONFIG.REPORTSDIRNAME}/{str(threading.current_thread()).replace('<','').replace('>','')}.txt', 'w') as file:
+        with open(f'{CONFIG().REPORTSDIRNAME}/{str(threading.current_thread()).replace('<','').replace('>','')}.txt', 'w') as file:
             file.write(str(self.reports))
 
     
     def _save_report_as_binary_file(self):
-        with open(f'{CONFIG.REPORTSDIRNAME}/{str(threading.current_thread()).replace('<','').replace('>','')}.data', 'wb') as file:
+        with open(f'{CONFIG().REPORTSDIRNAME}/{str(threading.current_thread()).replace('<','').replace('>','')}.data', 'wb') as file:
             file.write(pickle.dumps(self.reports))
     
 
     def _read_reports_from_binary_files(self):
         final_report = []
-        listdir = os.listdir(CONFIG.REPORTSDIRNAME)
+        listdir = os.listdir(CONFIG().REPORTSDIRNAME)
         for report_file_name in listdir:
-            with open(f'{CONFIG.REPORTSDIRNAME}/{report_file_name}', 'rb') as file:
+            with open(f'{CONFIG().REPORTSDIRNAME}/{report_file_name}', 'rb') as file:
                 final_report += [value for key, value in pickle.load(file).items()]
         return final_report
     
     
     def _read_reports_from_txt_files(self):
         final_report = []
-        listdir = os.listdir(CONFIG.REPORTSDIRNAME)
+        listdir = os.listdir(CONFIG().REPORTSDIRNAME)
         for report_file_name in listdir:
-            with open(f'{CONFIG.REPORTSDIRNAME}/{report_file_name}', 'rb') as file:
+            with open(f'{CONFIG().REPORTSDIRNAME}/{report_file_name}', 'rb') as file:
                 final_report += [value for key, value in dict(file.read()).items()]
         return final_report

@@ -4,8 +4,6 @@ from datetime import datetime
 from enum import Enum
 from dataclasses import dataclass
 
-from ._reports import TestLiteFixtureReports
-
 
 
 class STATUS(str, Enum):
@@ -101,6 +99,8 @@ class TestLiteTestReport:
     postcondition_status: str = None
     step_number_with_error: int = None
 
+    _fixturelist: list[TestLiteFixtureReport] = None
+
 
     @property
     def parametrize_name(self):
@@ -140,7 +140,7 @@ class TestLiteTestReport:
             'before': [],
             'after': []
         }
-        fixtures = TestLiteFixtureReports.get_all_fixtures_by_nodeid(self.nodeid)
+        fixtures = self._fixturelist
         for fixture in fixtures:
             fixture_dict['before'].append(fixture)
             if fixture.after_duration is not None:
