@@ -64,6 +64,7 @@ class TestReportJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, TestLiteTestReport):
             item = asdict(o)
+            del item['_fixturelist']
             item.update({
                 'parametrize_name': str(o.parametrize_name),
                 'startime_readable': str(o.startime_readable),
