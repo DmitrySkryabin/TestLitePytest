@@ -104,8 +104,8 @@ What it should look like
 Command Line Arguments
 ----------------------
 
-1. –-testsuite=PROJECT-TS-1 (TestSuite key in TestLite)
-2. –-savejson=json_report.json (If so, save the file with the report.)
+1. --testsuite=PROJECT-TS-1 (TestSuite key in TestLite)
+2. --savejson=json_report.json (If so, save the file with the report.)
 3. --collectfromtestlite (If specified, it will try to collect test cases using the keys specified in the test functions that correspond to the test suite in TestLite)
 
 If you specify testsuite then TestLitePytest will try to send a report
