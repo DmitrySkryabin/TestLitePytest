@@ -46,58 +46,60 @@ Use in your tests
 
 ::
 
-   import  testlite
+    import  testlite
 
-   class  TestWithTestLite:
+    class  TestWithTestLite:
 
-       @testlite.test_key('PROJECT-TC-1')
-       def  test_1(self):
-           pass
+        @testlite.test_key('PROJECT-TC-1')
+        def  test_1(self):
+            pass
                
-       @testlite.test_key('PROJECT-TC-2')
-       def  test_2(self):
-       pass
+        @testlite.test_key('PROJECT-TC-2')
+        def  test_2(self):
+        pass
 
 Where “PROJECT-TC-1” its test case key in TestLite
 
 ::
-    @testlite.test_key('PROJECT-TC-1')
-    def test_1():
-        #TestLiteStep
-        ..step1
-        #TestLiteStep
-        ..step2
-
-#TestLiteStep - This is a pointer to the start of the step. The next #TestLiteStep indicates that the step has ended and a new one has begun. If an error is caused between these comments, the report will show that the step was broken
-
-:: 
-    get_parameters_from_TestLite('PROJECT-TC-1')
-
-Returns parameters that are specified in test cases in TestLite
-
-What it should look like
-------------------------
-
-::
-    import testlite
-    import pytest
-
-    params = get_parameters_from_TestLite('PROJECT-TC-1')
-
-
-    class Test:
-
-        @pytest.fixture
-        def fixture(self):
-            return 'fixture value'
 
         @testlite.test_key('PROJECT-TC-1')
-        @pytest.mark.parametrize('data', params)
-        def test_1(self, fixture, data):
             #TestLiteStep
             ..step1
             #TestLiteStep
             ..step2
+               
+
+#TestLiteStep - This is a pointer to the start of the step. The next #TestLiteStep indicates that the step has ended and a new one has begun. If an error is caused between these comments, the report will show that the step was broken
+
+::
+
+    get_parameters_from_TestLite('PROJECT-TC-1')
+  
+Returns parameters that are specified in test cases in TestLite
+
+What it should look like
+------------------------
+::
+
+        import testlite
+        import pytest
+
+        params = get_parameters_from_TestLite('PROJECT-TC-1')
+
+        class Test:
+
+            @pytest.fixture
+            def fixture(self):
+                return 'fixture value'
+
+            @testlite.test_key('PROJECT-TC-1')
+            @pytest.mark.parametrize('data', params)
+            def test_1(self, fixture, data):
+                #TestLiteStep
+                ..step1
+                #TestLiteStep
+                ..step2
+
 
 Command Line Arguments
 ----------------------
