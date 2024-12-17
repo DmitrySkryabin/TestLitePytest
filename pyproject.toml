@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "TestLitePytest"
 description = "Pytest adaptor for TestLite TMS system"
-version = "0.2.1"
+version = "0.3.0"
 readme = "README.rst"
 requires-python = ">=3.10"
 authors = [
@@ -41,5 +41,6 @@ dependencies = [
 ]
 [project.urls]
 Repository = "https://github.com/DmitrySkryabin/TestLitePytest"
+TestLite = "https://github.com/DmitrySkryabin/TestLite"
 [project.entry-points.pytest11]
 TestLitePytest = "testlite_pytest.plugin"

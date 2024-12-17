@@ -1,4 +1,5 @@
 import pytest
+import requests
 from testlite._reports import (
     TestLiteTestReport,
     TestLiteTestReports,
@@ -6,6 +7,7 @@ from testlite._reports import (
     TestLiteFixtureReports,
     TestLiteReportManager
 )
+from testlite._config import CONFIG
 from testlite._helper import get_time
 from testlite._reports import fixture_after_save
 from testlite._models import STATUS
@@ -21,11 +23,17 @@ def pytest_addoption(parser):
         help='Set TestSuite Key. If the option is specified, then at the end we will try to send the results to TestLite'
     )
     group.addoption(
-        '--save_json',
+        '--savejson',
         action='store',
         dest='savejson',
         default=None,
         help='After end of testing saving JSON file with report'
+    )
+    group.addoption(
+        '--collectfromtestlite',
+        action='store_true',
+        dest='collectfromtestlite',
+        help='Collect tests from TestLite from the received keys'
     )
 
     parser.addini('HELLO', 'Dummy pytest.ini setting')
@@ -34,6 +42,32 @@ def pytest_addoption(parser):
 
 def pytest_configure(config):
     config.TSTestReports = TestLiteTestReports
+
+
+def pytest_collection_modifyitems(session, config, items):
+    if config.getoption('collectfromtestlite'):
+        try:
+            # Модифицируем наши коллекции
+            response = requests.get(
+                url= f'{CONFIG().TESTLITEURL}/api/v1/testsuite/{config.getoption("testsuite")}/get/testcases'
+            )
+            if response.status_code == 200:
+                collected_keys = response.json()['keys']
+                print(f'\nTestLitePytest output::\ncollecting keys: {collected_keys}')
+                remove_items = []
+                items_copy = items.copy()
+                items.clear()
+                for item in items_copy:
+                    if TestLite_testcase_key(item) in collected_keys:
+                        items.append(item)
+                    else:
+                        remove_items.append(item)
+
+                config.hook.pytest_deselected(items=remove_items)
+            else:
+                raise Exception('Error when testlitepytest plugin tried to collect tests from TestLite')
+        except:
+            raise Exception('Error when testlitepytest plugin tried to collect tests from TestLite')
 
 
 
@@ -142,7 +176,7 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus):
     else:
         TestLiteReportManager().save_report()
         final_report = TestLiteReportManager().get_reports()
-        if session.config.getoption('--save_json') is not None:
-            final_report.save_json_file(session.config.getoption("--save_json"))
+        if session.config.getoption('--savejson') is not None:
+            final_report.save_json_file(session.config.getoption("--savejson"))
         if session.config.getoption('--testsuite'):
             final_report.send_json_in_TestLite(testsuite=session.config.getoption('--testsuite'))

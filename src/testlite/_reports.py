@@ -154,14 +154,15 @@ class TestLiteFinalReport:
             file.write(self.json)
 
     def send_json_in_TestLite(self, testsuite):
-        response = requests.post(
-            url=f'{CONFIG().TESTLITEURL}/api/v1/project/{testsuite.split("-")[0]}/testsuite/{testsuite}/save',
-            data=self.json,
-            headers={
-                'Content-Type': 'application/json'
-            }
-        )
-      
+        if self.json != '[]':
+            response = requests.post(
+                url=f'{CONFIG().TESTLITEURL}/api/v1/project/{testsuite.split("-")[0]}/testsuite/{testsuite}/save',
+                data=self.json,
+                headers={
+                    'Content-Type': 'application/json'
+                }
+            )
+        
 
 class TestLiteReportManager:
 
