@@ -15,12 +15,12 @@ class MakeDict:
     def _make_dict_from_FixtureRunResult(self, obj):
         if isinstance(obj, FixtureRunResult):
             item = asdict(obj)
-            item.update({
-                'error': "".join(traceback.format_exception_only(type(obj.error), obj.error)).strip() if obj.error is not None else None
-            })
+            # item.update({
+            #     'error': "".join(traceback.format_exception_only(type(obj.error), obj.error)).strip() if obj.error is not None else None
+            # })
             return item
         else:
-            raise Exception('Its not a FixtureRunResult clas')
+            raise Exception('Its not a FixtureRunResult class')
     
 
     def remake(self, obj, key):

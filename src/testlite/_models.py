@@ -1,4 +1,5 @@
 import re
+import traceback
 
 from datetime import datetime
 from enum import Enum
@@ -27,12 +28,31 @@ class TestLiteFixtureReport:
     id: str
     nodeid: str 
     name: str = None
-    cached_result: tuple = None
     before_start_time: float = None
     before_stop_time: float = None
     after_start_time: float = None
     after_stop_time: float = None
+
     _after_error = None
+    _cached_result = None
+
+
+    @property
+    def cached_result(self) -> tuple:
+        return self._cached_result
+    
+
+    @cached_result.setter
+    def cached_result(self, result: tuple):
+        self._cached_result = result
+        if result[2] is None:
+            self._cached_result = result
+        else:
+            if type(result[2]) is tuple:
+                exception = result[2][0]
+            if type(result[2]) is Exception:
+                exception = result[2]   
+            self._cached_result = (result[0], result[1], "".join(traceback.format_exception_only(type(exception), exception)).strip())
 
 
     @property

@@ -129,7 +129,9 @@ def pytest_fixture_post_finalizer(fixturedef, request):
 
         fixture_report = TestLiteFixtureReports.get_fixture_report(id, nodeid)
         fixture_report.name = request.fixturename
-        fixture_report.cached_result = fixturedef.cached_result
+        if fixture_report.cached_result is None:
+            # При вызое из под другой фикстуры чота странно вызывается финалайзер
+            fixture_report.cached_result = fixturedef.cached_result
         TestLiteFixtureReports.save_fixture_report(id, fixture_report)
 
 
