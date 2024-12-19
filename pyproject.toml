@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "TestLitePytest"
 description = "Pytest adaptor for TestLite TMS system"
-version = "0.3.0"
+version = "0.3.1"
 readme = "README.rst"
 requires-python = ">=3.10"
 authors = [
