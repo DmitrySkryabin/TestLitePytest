@@ -95,7 +95,7 @@ class TestLiteFixtureReport:
         if exc_val is not None:
             self._after_error = FixtureRunResult(
                 status=STATUS.ERROR,
-                error=exc_val
+                error=str(exc_val)
             )
         else:
             self._after_error = FixtureRunResult(
